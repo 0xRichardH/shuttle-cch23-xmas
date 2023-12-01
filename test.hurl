@@ -1,17 +1,17 @@
 ###
-# hurl --verbose test.hurl
+# hurl --variable host=http://localhost:8000 --verbose test.hurl
 ###
 
 
 ### Day -1: Get your winter boots on!
 
 # Task 1: Everything is OK
-GET http://localhost:8000/
+GET {{host}}/
 HTTP 200
 `Hello, world!`
 
 # Task 2: Fake error (0 bonus points)
-GET http://localhost:8000/-1/error
+GET {{host}}/-1/error
 HTTP 500
 
 
@@ -19,6 +19,15 @@ HTTP 500
 
 
 # ⭐ Task 1: Cube the bits
-GET http://localhost:8000/1/4/8
+GET {{host}}/1/4/8
 HTTP 200
 `1728`
+
+# 🎁 Task 2: The sled ID system (100 bonus points)
+GET {{host}}/1/10
+HTTP 200
+`1000`
+
+GET {{host}}/1/4/5/8/10
+HTTP 200
+`27`
