@@ -8,17 +8,21 @@ async fn fake_error() -> impl IntoResponse {
     (StatusCode::INTERNAL_SERVER_ERROR, "Internal Server Error")
 }
 
-async fn recalibrate_packet_id(Path(rest): Path<String>) -> String {
+async fn recalibrate_packet_id(Path(rest): Path<String>) -> impl IntoResponse {
     let numbers = rest
         .split('/')
         .flat_map(|s| s.parse().ok())
         .collect::<Vec<u32>>();
 
+    if numbers.len() > 20 {
+        return (StatusCode::NOT_FOUND, "Not Found".to_string());
+    }
+
     let mut xor_rsult = 0;
     for n in numbers {
         xor_rsult ^= n;
     }
-    xor_rsult.pow(3).to_string()
+    (StatusCode::OK, xor_rsult.pow(3).to_string())
 }
 
 #[shuttle_runtime::main]
