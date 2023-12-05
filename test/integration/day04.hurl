@@ -46,11 +46,9 @@ Content-Type: application/json
   ]
 ```
 HTTP 200
-```json
-{
-  "fastest": "Speeding past the finish line with a strength of 5 is Dasher",
-  "tallest": "Dasher is standing tall with his 36 cm wide antlers",
-  "magician": "Dasher could blast you away with a snow magic power of 9001",
-  "consumer": "Dancer ate lots of candies, but also some grass"
-}
-```
+[Asserts]
+header "Content-Type" == "application/json"
+jsonpath "$.fastest" == "Speeding past the finish line with a strength of 5 is Dasher"
+jsonpath "$.tallest" == "Dasher is standing tall with his 36 cm wide antlers"
+jsonpath "$.magician" == "Dasher could blast you away with a snow magic power of 9001"
+jsonpath "$.consumer" == "Dancer ate lots of candies, but also some grass"

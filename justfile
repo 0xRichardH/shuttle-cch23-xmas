@@ -10,7 +10,7 @@ watch day:
   cargo watch -s "just local {{day}}" -d 3 
 
 dev:
-  cargo watch -x "shuttle run"
+  cargo watch -qcx "shuttle run" -E RUST_LOG="cch23_xmas=trace"
 
 deploy:
   cargo shuttle deploy --allow-dirty
