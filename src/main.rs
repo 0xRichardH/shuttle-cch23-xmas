@@ -1,11 +1,11 @@
 use axum::{
-    extract,
+    debug_handler, extract,
     http::StatusCode,
     response::IntoResponse,
     routing::{get, post},
     Router,
 };
-use serde::Deserialize;
+use cch23_xmas::Reindeer;
 
 async fn hello_world() -> &'static str {
     "Hello, world!"
@@ -32,17 +32,18 @@ async fn recalibrate_packet_id(extract::Path(rest): extract::Path<String>) -> im
     (StatusCode::OK, xor_rsult.pow(3).to_string())
 }
 
-#[derive(Deserialize)]
-struct Reindeer {
-    name: String,
-    strength: u32,
-}
-
 async fn reindeer_strength(
     extract::Json(reindeers): extract::Json<Vec<Reindeer>>,
 ) -> impl IntoResponse {
-    let strength = reindeers.iter().map(|r| r.strength).sum::<u32>();
+    let strength = reindeers.iter().map(|r| r.strength()).sum::<u32>();
     (StatusCode::OK, strength.to_string())
+}
+
+#[debug_handler]
+async fn reindeer_contest(
+    extract::Json(reindeers): extract::Json<Vec<Reindeer>>,
+) -> impl IntoResponse {
+    (StatusCode::OK, "")
 }
 
 #[shuttle_runtime::main]
@@ -51,7 +52,8 @@ async fn main() -> shuttle_axum::ShuttleAxum {
         .route("/", get(hello_world))
         .route("/-1/error", get(fake_error))
         .route("/1/*rest", get(recalibrate_packet_id))
-        .route("/4/strength", post(reindeer_strength));
+        .route("/4/strength", post(reindeer_strength))
+        .route("/4/contest", post(reindeer_contest));
 
     Ok(router.into())
 }
