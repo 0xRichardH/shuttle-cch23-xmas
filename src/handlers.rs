@@ -76,11 +76,21 @@ pub async fn reindeer_contest(
 #[derive(Serialize)]
 pub struct CountElfResponse {
     elf: usize,
+    #[serde(rename(serialize = "elf on a shelf"))]
+    elf_on_shelf: usize,
+    #[serde(rename(serialize = "shelf with no elf on it"))]
+    shelf_with_no_elf: usize,
 }
 pub async fn count_elf(body: String) -> Json<CountElfResponse> {
     trace!("count_elf: {body}");
 
-    let count = body.match_indices("elf").count();
+    let elf = body.match_indices("elf").count();
+    let elf_on_shelf = body.matches("elf on a shelf").count();
+    let shelf_with_no_elf = body.match_indices("shelf").count() - elf_on_shelf;
 
-    Json(CountElfResponse { elf: count })
+    Json(CountElfResponse {
+        elf,
+        elf_on_shelf,
+        shelf_with_no_elf,
+    })
 }
