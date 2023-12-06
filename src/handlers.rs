@@ -1,4 +1,6 @@
 use axum::{debug_handler, extract, http::StatusCode, response::IntoResponse, Json};
+use serde::Serialize;
+use tracing::trace;
 
 use crate::{Reindeer, ReindeerContestStats};
 
@@ -69,4 +71,26 @@ pub async fn reindeer_contest(
         reindeers[consumer_idx].clone(),
     );
     Json(stats)
+}
+
+#[derive(Serialize)]
+pub struct CountElfResponse {
+    elf: usize,
+    #[serde(rename(serialize = "elf on a shelf"))]
+    elf_on_shelf: usize,
+    #[serde(rename(serialize = "shelf with no elf on it"))]
+    shelf_with_no_elf: usize,
+}
+pub async fn count_elf(body: String) -> Json<CountElfResponse> {
+    trace!("count_elf: {body}");
+
+    let elf = body.match_indices("elf").count();
+    let elf_on_shelf = body.matches("elf on a shelf").count();
+    let shelf_with_no_elf = body.match_indices("shelf").count() - elf_on_shelf;
+
+    Json(CountElfResponse {
+        elf,
+        elf_on_shelf,
+        shelf_with_no_elf,
+    })
 }
