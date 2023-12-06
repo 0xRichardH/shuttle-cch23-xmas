@@ -1,4 +1,14 @@
 use axum::{debug_handler, extract, http::StatusCode, response::IntoResponse, Json};
+use nom::{
+    bytes::complete::{take_till, take_until, take_until1},
+    character::{complete::newline, streaming::alphanumeric1},
+    multi::{many0, separated_list1},
+    sequence::{preceded, terminated},
+    IResult, Parser,
+};
+use nom_supreme::{tag::complete::tag, ParserExt};
+use serde::Serialize;
+use tracing::trace;
 
 use crate::{Reindeer, ReindeerContestStats};
 
@@ -69,4 +79,32 @@ pub async fn reindeer_contest(
         reindeers[consumer_idx].clone(),
     );
     Json(stats)
+}
+
+#[derive(Serialize)]
+pub struct CountElfResponse {
+    elf: usize,
+}
+pub async fn count_elf(body: String) -> Json<CountElfResponse> {
+    trace!("count_elf: {body}");
+
+    let (_, elfs) = parse_elf(body.as_str()).unwrap();
+
+    Json(CountElfResponse { elf: elfs.len() })
+}
+
+fn parse_elf(input: &str) -> IResult<&str, Vec<&str>> {
+    let (input, elfs) = many0(terminated(take_until("\n"), newline).map(|line| {
+        let (_, elfs) = parse_elfs(line).unwrap();
+        elfs
+    }))
+    .parse(input)?;
+
+    let elfs = elfs.into_iter().flatten().collect();
+
+    Ok((input, elfs))
+}
+
+fn parse_elfs(input: &str) -> IResult<&str, Vec<&str>> {
+    many0(preceded(take_until1("elf"), tag("elf"))).parse(input)
 }
