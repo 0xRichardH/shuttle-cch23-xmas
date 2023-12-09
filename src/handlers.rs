@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use anyhow::Context;
 use axum::{debug_handler, extract, http::StatusCode, response::IntoResponse, Json};
 use axum_extra::extract::CookieJar;
@@ -106,15 +108,23 @@ pub async fn cookies_recipe(jar: CookieJar) -> Result<String, AppError> {
 
 #[derive(Debug, Deserialize)]
 struct BakeCookieRequest {
-    recipe: CookieIngredient,
-    pantry: CookieIngredient,
+    recipe: HashMap<String, u32>,
+    pantry: HashMap<String, u32>,
 }
 
 pub async fn bake_cookies(jar: CookieJar) -> Result<Json<serde_json::Value>, AppError> {
     let recipe_and_pantry = get_cookies_recipe(jar)?;
     let recipe_and_pantry = serde_json::from_str::<BakeCookieRequest>(&recipe_and_pantry)?;
-    let recipe = recipe_and_pantry.recipe;
-    let pantry = recipe_and_pantry.pantry;
+    let recipe = CookieIngredient::from(&recipe_and_pantry.recipe);
+    let pantry = CookieIngredient::from(&recipe_and_pantry.pantry);
+    if recipe.is_none() || pantry.is_none() {
+        return Ok(Json(json!({
+            "cookies": 0,
+            "pantry": json!(recipe_and_pantry.pantry),
+        })));
+    }
+    let recipe = recipe.unwrap();
+    let pantry = pantry.unwrap();
 
     // calculate how many cookies we can bake
     let cookies_count = vec![

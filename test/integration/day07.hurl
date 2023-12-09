@@ -21,3 +21,12 @@ jsonpath "$.pantry.sugar" == 307
 jsonpath "$.pantry.butter" == 2002
 jsonpath "$.pantry['baking powder']" == 825
 jsonpath "$.pantry.['chocolate chips']" == 257
+
+# 🎁 Task 3: Questionable cookie recipes (100 bonus points)
+GET {{host}}/7/bake
+Cookie: recipe=eyJyZWNpcGUiOnsic2xpbWUiOjl9LCJwYW50cnkiOnsiY29iYmxlc3RvbmUiOjY0LCJzdGljayI6IDR9fQ==
+HTTP 200
+[Asserts]
+jsonpath "$.cookies" == 0
+jsonpath "$.pantry.cobblestone" == 64
+jsonpath "$.pantry.stick" == 4
