@@ -188,9 +188,9 @@ impl CookieIngredient {
 }
 
 #[derive(Debug, Deserialize)]
-pub struct Pokemon<'a> {
+pub struct Pokemon {
     id: u64,
-    name: &'a str,
+    name: String,
     base_experience: u32,
     height: u32,
     is_default: bool,
