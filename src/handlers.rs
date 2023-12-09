@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::json;
 use tracing::trace;
 
-use crate::{errors::AppError, CookieIngredient, Reindeer, ReindeerContestStats};
+use crate::{errors::AppError, CookieIngredient, Pokemon, Reindeer, ReindeerContestStats};
 
 pub async fn hello_world() -> &'static str {
     "Hello, world!"
@@ -166,4 +166,21 @@ fn get_cookies_recipe(jar: CookieJar) -> anyhow::Result<String> {
     }
 
     Ok(recipe)
+}
+
+pub async fn get_pokemon_weight(
+    extract::Path(number): extract::Path<u64>,
+) -> Result<String, AppError> {
+    let body = reqwest::get(format!("https://pokeapi.co/api/v2/pokemon/{number}"))
+        .await?
+        .bytes()
+        .await?;
+    let pokemon: Pokemon = serde_json::from_slice(body.as_ref())?;
+
+    tracing::info!("get pokemon: {pokemon:?}");
+
+    // convert hectogram to kilogram
+    let weight = pokemon.weight / 10;
+
+    Ok(weight.to_string())
 }
