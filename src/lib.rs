@@ -161,3 +161,14 @@ impl Serialize for ReindeerContestStats {
         state.end()
     }
 }
+
+#[derive(Debug, Deserialize, Default)]
+pub struct CookieIngredient {
+    flour: u32,
+    sugar: u32,
+    butter: u32,
+    #[serde(rename = "baking powder")]
+    baking_powder: u32,
+    #[serde(rename = "chocolate chips")]
+    chocolate_chips: u32,
+}

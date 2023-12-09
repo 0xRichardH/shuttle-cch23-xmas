@@ -299,6 +299,7 @@ dependencies = [
  "axum-extra",
  "base64",
  "serde",
+ "serde_json",
  "shuttle-axum",
  "shuttle-runtime",
  "tokio",
