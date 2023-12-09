@@ -1,6 +1,7 @@
+pub mod errors;
 pub mod handlers;
 
-use std::fmt::Display;
+use std::{collections::HashMap, fmt::Display};
 
 use serde::{ser::SerializeStruct, Deserialize, Serialize, Serializer};
 
@@ -158,5 +159,30 @@ impl Serialize for ReindeerContestStats {
         }
 
         state.end()
+    }
+}
+
+#[derive(Debug, Deserialize, Default)]
+pub struct CookieIngredient {
+    flour: u32,
+    sugar: u32,
+    butter: u32,
+    #[serde(rename = "baking powder")]
+    baking_powder: u32,
+    #[serde(rename = "chocolate chips")]
+    chocolate_chips: u32,
+}
+
+impl CookieIngredient {
+    pub fn from(r: &HashMap<String, u32>) -> Option<Self> {
+        let ingredient = Self {
+            flour: r.get("flour")?.to_owned(),
+            sugar: r.get("sugar")?.to_owned(),
+            butter: r.get("butter")?.to_owned(),
+            baking_powder: r.get("baking powder")?.to_owned(),
+            chocolate_chips: r.get("chocolate chips")?.to_owned(),
+        };
+
+        Some(ingredient)
     }
 }
