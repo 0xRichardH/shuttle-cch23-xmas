@@ -1,7 +1,9 @@
 use axum::{
+    error_handling::HandleErrorLayer,
     extract::{MatchedPath, Request},
+    http::StatusCode,
     routing::{get, post},
-    Router,
+    Router, ServiceExt,
 };
 use cch23_xmas::handlers;
 use tower_http::trace::TraceLayer;
@@ -15,6 +17,7 @@ async fn main() -> shuttle_axum::ShuttleAxum {
         .route("/4/strength", post(handlers::reindeer_strength))
         .route("/4/contest", post(handlers::reindeer_contest))
         .route("/6", post(handlers::count_elf))
+        .route("/7/decode", get(handlers::cookies_recipe))
         .layer(
             TraceLayer::new_for_http().make_span_with(|request: &Request<_>| {
                 // Log the matched route's path (with placeholders not filled in).

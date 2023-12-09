@@ -1,8 +1,10 @@
+use anyhow::Context;
 use axum::{debug_handler, extract, http::StatusCode, response::IntoResponse, Json};
+use axum_extra::extract::CookieJar;
 use serde::Serialize;
 use tracing::trace;
 
-use crate::{Reindeer, ReindeerContestStats};
+use crate::{errors::AppError, Reindeer, ReindeerContestStats};
 
 pub async fn hello_world() -> &'static str {
     "Hello, world!"
@@ -93,4 +95,13 @@ pub async fn count_elf(body: String) -> Json<CountElfResponse> {
         elf_on_shelf,
         shelf_with_no_elf,
     })
+}
+
+pub async fn cookies_recipe(jar: CookieJar) -> Result<String, AppError> {
+    let mut recipe = String::new();
+    if let Some(recipe_result) = jar.get("recipe").map(|c| base64::decode(c.value())) {
+        recipe = String::from_utf8(recipe_result?).context("convert to string recipe")?;
+    }
+
+    Ok(recipe)
 }
