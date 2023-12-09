@@ -17,6 +17,8 @@ async fn main() -> shuttle_axum::ShuttleAxum {
         .route("/6", post(handlers::count_elf))
         .route("/7/decode", get(handlers::cookies_recipe))
         .route("/7/bake", get(handlers::bake_cookies))
+        .route("/8/weight/:number", get(handlers::get_pokemon_weight))
+        .route("/8/drop/:number", get(handlers::drop_pokemon))
         .layer(
             TraceLayer::new_for_http().make_span_with(|request: &Request<_>| {
                 // Log the matched route's path (with placeholders not filled in).

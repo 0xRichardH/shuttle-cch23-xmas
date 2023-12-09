@@ -186,3 +186,14 @@ impl CookieIngredient {
         Some(ingredient)
     }
 }
+
+#[derive(Debug, Deserialize)]
+pub struct Pokemon {
+    id: u64,
+    name: String,
+    base_experience: u32,
+    height: u32,
+    is_default: bool,
+    order: u32,
+    weight: u32,
+}
