@@ -23,7 +23,7 @@ pub async fn recalibrate_packet_id(
     let numbers = rest
         .split('/')
         .flat_map(|s| s.parse().ok())
-        .collect::<Vec<u32>>();
+        .collect::<Vec<i32>>();
 
     if numbers.len() > 20 {
         return (StatusCode::NOT_FOUND, "Not Found".to_string());
