@@ -129,12 +129,14 @@ pub async fn cookies_recipe(jar: CookieJar) -> Result<String, AppError> {
 
 #[derive(Debug, Deserialize)]
 struct BakeCookieRequest {
-    recipe: HashMap<String, u32>,
-    pantry: HashMap<String, u32>,
+    recipe: HashMap<String, u64>,
+    pantry: HashMap<String, u64>,
 }
 
 pub async fn bake_cookies(jar: CookieJar) -> Result<Json<serde_json::Value>, AppError> {
     let recipe_and_pantry = get_cookies_recipe(jar)?;
+    tracing::debug!("recipe_and_pantry {:?}", recipe_and_pantry);
+
     let recipe_and_pantry = serde_json::from_str::<BakeCookieRequest>(&recipe_and_pantry)?;
     let recipe = CookieIngredient::from(&recipe_and_pantry.recipe);
     let pantry = CookieIngredient::from(&recipe_and_pantry.pantry);
@@ -144,6 +146,7 @@ pub async fn bake_cookies(jar: CookieJar) -> Result<Json<serde_json::Value>, App
             "pantry": json!(recipe_and_pantry.pantry),
         })));
     }
+
     let recipe = recipe.unwrap();
     let pantry = pantry.unwrap();
 
@@ -200,7 +203,7 @@ pub async fn get_pokemon_weight(
 pub async fn drop_pokemon(extract::Path(number): extract::Path<u64>) -> Result<String, AppError> {
     let pokemon = get_pokemon_by_number(number).await?;
     let weight = convert_hg_to_kg(pokemon.weight);
-    let result = weight as f64 * (9.825 * 20f64).sqrt();
+    let result = weight * (9.825 * 20f64).sqrt();
     Ok(result.to_string())
 }
 
@@ -215,7 +218,7 @@ async fn get_pokemon_by_number(number: u64) -> anyhow::Result<Pokemon> {
     Ok(pokemon)
 }
 
-fn convert_hg_to_kg(hg: u32) -> u32 {
+fn convert_hg_to_kg(hg: u32) -> f64 {
     // convert hectogram to kilogram
-    hg / 10
+    hg as f64 / 10f64
 }

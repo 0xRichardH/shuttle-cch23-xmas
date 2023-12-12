@@ -167,17 +167,17 @@ impl Serialize for ReindeerContestStats {
 
 #[derive(Debug, Deserialize, Default)]
 pub struct CookieIngredient {
-    flour: u32,
-    sugar: u32,
-    butter: u32,
+    flour: u64,
+    sugar: u64,
+    butter: u64,
     #[serde(rename = "baking powder")]
-    baking_powder: u32,
+    baking_powder: u64,
     #[serde(rename = "chocolate chips")]
-    chocolate_chips: u32,
+    chocolate_chips: u64,
 }
 
 impl CookieIngredient {
-    pub fn from(r: &HashMap<String, u32>) -> Option<Self> {
+    pub fn from(r: &HashMap<String, u64>) -> Option<Self> {
         let ingredient = Self {
             flour: r.get("flour")?.to_owned(),
             sugar: r.get("sugar")?.to_owned(),
