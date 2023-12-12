@@ -1,13 +1,30 @@
 use std::collections::HashMap;
 
 use anyhow::Context;
-use axum::{debug_handler, extract, http::StatusCode, response::IntoResponse, Json};
+use axum::{
+    debug_handler, extract,
+    http::{StatusCode, Uri},
+    response::IntoResponse,
+    Json,
+};
 use axum_extra::extract::CookieJar;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use tracing::trace;
 
 use crate::{errors::AppError, CookieIngredient, Pokemon, Reindeer, ReindeerContestStats};
+
+pub async fn not_found_handler(uri: Uri) -> (StatusCode, Json<serde_json::Value>) {
+    tracing::info!("path not found: {}", uri.path());
+
+    (
+        StatusCode::NOT_FOUND,
+        Json(json!( {
+            "error": String::from("not_found"),
+            "message": Some(format!("Requested path `{}` not found.", uri.path())),
+        })),
+    )
+}
 
 pub async fn hello_world() -> &'static str {
     "Hello, world!"
@@ -39,6 +56,8 @@ pub async fn recalibrate_packet_id(
 pub async fn reindeer_strength(
     extract::Json(reindeers): extract::Json<Vec<Reindeer>>,
 ) -> impl IntoResponse {
+    tracing::debug!("reindeers: {:?}", reindeers);
+
     let strength = reindeers.iter().map(|r| r.strength()).sum::<u32>();
     (StatusCode::OK, strength.to_string())
 }
@@ -51,6 +70,8 @@ pub async fn reindeer_contest(
     let mut tallest_idx = 0;
     let mut magician_idx = 0;
     let mut consumer_idx = 0;
+
+    tracing::debug!("reindeers: {:?}", reindeers);
 
     reindeers.iter().enumerate().for_each(|(idx, deer)| {
         if deer.speed() > reindeers[fastest_idx].speed() {

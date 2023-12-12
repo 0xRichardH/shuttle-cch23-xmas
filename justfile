@@ -10,7 +10,7 @@ watch day:
   cargo watch -qcs "just local {{day}}" -d 2 
 
 dev:
-  cargo watch -qcx "shuttle run" -E RUST_LOG="cch23_xmas=trace"
+  cargo watch -qcx "shuttle run" -E RUST_LOG="cch23_xmas=trace,axum::rejection=trace"
 
 validate day:
   cch23-validator {{day}}
