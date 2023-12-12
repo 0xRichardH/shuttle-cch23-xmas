@@ -9,9 +9,9 @@ use serde::{ser::SerializeStruct, Deserialize, Serialize, Serializer};
 pub enum ReindeerFood {
     Grass,
     Hay,
+    Pizza,
+    Unknown(String),
 }
-
-impl Copy for ReindeerFood {}
 
 impl<'de> Deserialize<'de> for ReindeerFood {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
@@ -22,7 +22,8 @@ impl<'de> Deserialize<'de> for ReindeerFood {
         match s.as_str() {
             "grass" => Ok(ReindeerFood::Grass),
             "hay" => Ok(ReindeerFood::Hay),
-            _ => Err(serde::de::Error::custom(format!("unknown food: {}", s))),
+            "pizza" => Ok(ReindeerFood::Pizza),
+            _ => Ok(ReindeerFood::Unknown(s)),
         }
     }
 }
@@ -32,6 +33,8 @@ impl Display for ReindeerFood {
         match self {
             ReindeerFood::Grass => write!(f, "grass"),
             ReindeerFood::Hay => write!(f, "hay"),
+            ReindeerFood::Pizza => write!(f, "pizza"),
+            ReindeerFood::Unknown(s) => write!(f, "{}", s),
         }
     }
 }
@@ -75,7 +78,7 @@ impl Reindeer {
     }
 
     pub fn favorite_food(&self) -> Option<ReindeerFood> {
-        self.favorite_food
+        self.favorite_food.clone()
     }
 
     pub fn candy_eaten_yesterday(&self) -> Option<u32> {
