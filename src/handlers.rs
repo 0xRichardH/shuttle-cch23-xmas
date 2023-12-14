@@ -1,18 +1,19 @@
 use std::collections::HashMap;
 
-use anyhow::Context;
+use anyhow::{bail, Context};
 use axum::{
     debug_handler, extract,
     http::{StatusCode, Uri},
     response::IntoResponse,
     Json,
 };
-use axum_extra::extract::CookieJar;
+use axum_extra::{headers::Cookie, TypedHeader};
+use base64::{engine::general_purpose, Engine};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use tracing::trace;
 
-use crate::{errors::AppError, CookieIngredient, Pokemon, Reindeer, ReindeerContestStats};
+use crate::{errors::AppError, Pokemon, Reindeer, ReindeerContestStats};
 
 pub async fn not_found_handler(uri: Uri) -> (StatusCode, Json<serde_json::Value>) {
     tracing::info!("path not found: {}", uri.path());
@@ -107,12 +108,20 @@ pub struct CountElfResponse {
     #[serde(rename(serialize = "shelf with no elf on it"))]
     shelf_with_no_elf: usize,
 }
-pub async fn count_elf(body: String) -> Json<CountElfResponse> {
-    trace!("count_elf: {body}");
 
-    let elf = body.match_indices("elf").count();
-    let elf_on_shelf = body.matches("elf on a shelf").count();
-    let shelf_with_no_elf = body.match_indices("shelf").count() - elf_on_shelf;
+#[debug_handler]
+pub async fn count_elf(body: String) -> Json<CountElfResponse> {
+    trace!("count_elf request body: {body}");
+
+    let elf = body.matches("elf").count();
+
+    let elf_on_shelf_search = b"elf on a shelf";
+    let elf_on_shelf = body
+        .as_bytes()
+        .windows(elf_on_shelf_search.len())
+        .filter(|el| el == elf_on_shelf_search)
+        .count();
+    let shelf_with_no_elf = body.matches("shelf").count() - elf_on_shelf;
 
     Json(CountElfResponse {
         elf,
@@ -121,8 +130,8 @@ pub async fn count_elf(body: String) -> Json<CountElfResponse> {
     })
 }
 
-pub async fn cookies_recipe(jar: CookieJar) -> Result<String, AppError> {
-    let recipe = get_cookies_recipe(jar)?;
+pub async fn cookies_recipe(TypedHeader(cookie): TypedHeader<Cookie>) -> Result<String, AppError> {
+    let recipe = get_cookies_recipe(&cookie)?;
 
     Ok(recipe)
 }
@@ -133,61 +142,47 @@ struct BakeCookieRequest {
     pantry: HashMap<String, u64>,
 }
 
-pub async fn bake_cookies(jar: CookieJar) -> Result<Json<serde_json::Value>, AppError> {
-    let recipe_and_pantry = get_cookies_recipe(jar)?;
-    tracing::debug!("recipe_and_pantry {:?}", recipe_and_pantry);
+#[debug_handler]
+pub async fn bake_cookies(
+    TypedHeader(cookie): TypedHeader<Cookie>,
+) -> Result<Json<serde_json::Value>, AppError> {
+    let recipe_and_pantry = get_cookies_recipe(&cookie)?;
+    // tracing::debug!("recipe_and_pantry {:?}", recipe_and_pantry);
 
     let recipe_and_pantry = serde_json::from_str::<BakeCookieRequest>(&recipe_and_pantry)?;
-    let recipe = CookieIngredient::from(&recipe_and_pantry.recipe);
-    let pantry = CookieIngredient::from(&recipe_and_pantry.pantry);
-    if recipe.is_none() || pantry.is_none() {
-        return Ok(Json(json!({
-            "cookies": 0,
-            "pantry": json!(recipe_and_pantry.pantry),
-        })));
-    }
-
-    let recipe = recipe.unwrap();
-    let pantry = pantry.unwrap();
+    let mut pantry = recipe_and_pantry.pantry;
+    let recipe = recipe_and_pantry.recipe;
 
     // calculate how many cookies we can bake
-    let cookies_count = vec![
-        pantry.flour / recipe.flour,
-        pantry.sugar / recipe.sugar,
-        pantry.butter / recipe.butter,
-        pantry.baking_powder / recipe.baking_powder,
-        pantry.chocolate_chips / recipe.chocolate_chips,
-    ]
-    .into_iter()
-    .min();
+    let cookies_count = recipe.iter().fold(u64::MAX, |count, (ingredient, amount)| {
+        if let Some(avaliable) = pantry.get(ingredient) {
+            if let Some(c) = avaliable.checked_div(*amount) {
+                return count.min(c);
+            }
+        }
 
-    let mut remain_pantry = CookieIngredient::default();
-    if let Some(cookies_count) = cookies_count {
-        remain_pantry.flour = pantry.flour - recipe.flour * cookies_count;
-        remain_pantry.sugar = pantry.sugar - recipe.sugar * cookies_count;
-        remain_pantry.butter = pantry.butter - recipe.butter * cookies_count;
-        remain_pantry.baking_powder = pantry.baking_powder - recipe.baking_powder * cookies_count;
-        remain_pantry.chocolate_chips =
-            pantry.chocolate_chips - recipe.chocolate_chips * cookies_count;
-    }
+        0
+    });
+
+    pantry.iter_mut().for_each(|(key, value)| {
+        *value -= cookies_count * recipe.get(key).unwrap_or(&0);
+    });
 
     Ok(Json(json!({
         "cookies": cookies_count,
-        "pantry": {
-            "flour": remain_pantry.flour,
-            "sugar": remain_pantry.sugar,
-            "butter": remain_pantry.butter,
-            "baking powder": remain_pantry.baking_powder,
-            "chocolate chips": remain_pantry.chocolate_chips,
-        }
+        "pantry": pantry
     })))
 }
 
-fn get_cookies_recipe(jar: CookieJar) -> anyhow::Result<String> {
-    let mut recipe = String::new();
-    if let Some(recipe_result) = jar.get("recipe").map(|c| base64::decode(c.value())) {
-        recipe = String::from_utf8(recipe_result?).context("convert to string recipe")?;
+fn get_cookies_recipe(cookie: &Cookie) -> anyhow::Result<String> {
+    let recipe_cookie = cookie.get("recipe");
+    if recipe_cookie.is_none() {
+        bail!("recipe cookie not found");
     }
+    let recipe_result = general_purpose::STANDARD
+        .decode(recipe_cookie.unwrap())
+        .context("decode recipe")?;
+    let recipe = String::from_utf8(recipe_result).context("convert to string recipe")?;
 
     Ok(recipe)
 }
