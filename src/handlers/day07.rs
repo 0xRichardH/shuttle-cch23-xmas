@@ -27,32 +27,35 @@ pub async fn cookies_recipe(TypedHeader(cookie): TypedHeader<Cookie>) -> Result<
 pub async fn bake_cookies(
     TypedHeader(cookie): TypedHeader<Cookie>,
 ) -> Result<Json<serde_json::Value>, AppError> {
-    let recipe_and_pantry = get_cookies_recipe(&cookie)?;
-    // tracing::debug!("recipe_and_pantry {:?}", recipe_and_pantry);
+    let recipe_and_pantry =
+        get_cookies_recipe(&cookie).context("get recipe_and_pantry from cookies")?;
+    tracing::debug!("recipe_and_pantry {:?}", recipe_and_pantry);
 
     let recipe_and_pantry = serde_json::from_str::<BakeCookieRequest>(&recipe_and_pantry)?;
     let mut pantry = recipe_and_pantry.pantry;
     let recipe = recipe_and_pantry.recipe;
 
     // calculate how many cookies we can bake
-    let cookies_count = recipe.iter().fold(u64::MAX, |count, (ingredient, amount)| {
+    let cookies_count = recipe.iter().fold(u64::MAX, |count, (ingredient, needed)| {
         if let Some(avaliable) = pantry.get(ingredient) {
-            if let Some(c) = avaliable.checked_div(*amount) {
+            if let Some(c) = avaliable.checked_div(*needed) {
                 return count.min(c);
             }
         }
 
-        0
+        count.min(u64::MAX)
     });
 
     pantry.iter_mut().for_each(|(key, value)| {
         *value -= cookies_count * recipe.get(key).unwrap_or(&0);
     });
 
-    Ok(Json(json!({
+    let res = Json(json!({
         "cookies": cookies_count,
         "pantry": pantry
-    })))
+    }));
+
+    Ok(res)
 }
 
 fn get_cookies_recipe(cookie: &Cookie) -> anyhow::Result<String> {
