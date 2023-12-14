@@ -30,3 +30,14 @@ jsonpath "$.elf" == 5
 jsonpath "$['elf on a shelf']" == 1
 jsonpath "$['shelf with no elf on it']" == 1
 
+# test cases
+
+POST {{host}}/6
+Content-Type: text/plain
+```
+In Belfast I heard an elf on a shelf on a shelf on a
+```
+HTTP 200
+[Asserts]
+header "Content-Type" == "application/json"
+jsonpath "$.elf" == 4
