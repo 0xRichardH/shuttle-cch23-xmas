@@ -20,6 +20,7 @@ async fn main() -> shuttle_axum::ShuttleAxum {
         .route("/8/weight/:number", get(handlers::get_pokemon_weight))
         .route("/8/drop/:number", get(handlers::drop_pokemon))
         .nest_service("/11/assets/", ServeDir::new("assets"))
+        .route("/11/red_pixels", post(handlers::red_pixels))
         .fallback(handlers::not_found_handler)
         .layer(
             TraceLayer::new_for_http().make_span_with(|request: &Request<_>| {
