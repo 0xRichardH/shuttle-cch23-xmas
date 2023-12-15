@@ -4,7 +4,7 @@ use axum::{
     Router,
 };
 use cch23_xmas::handlers::{self};
-use tower_http::trace::TraceLayer;
+use tower_http::{services::ServeDir, trace::TraceLayer};
 
 #[shuttle_runtime::main]
 async fn main() -> shuttle_axum::ShuttleAxum {
@@ -19,6 +19,7 @@ async fn main() -> shuttle_axum::ShuttleAxum {
         .route("/7/bake", get(handlers::bake_cookies))
         .route("/8/weight/:number", get(handlers::get_pokemon_weight))
         .route("/8/drop/:number", get(handlers::drop_pokemon))
+        .nest_service("/11/assets/", ServeDir::new("assets"))
         .fallback(handlers::not_found_handler)
         .layer(
             TraceLayer::new_for_http().make_span_with(|request: &Request<_>| {
