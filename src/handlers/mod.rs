@@ -1,7 +1,9 @@
 mod day07;
 mod day11;
+mod day12;
 pub use day07::*;
 pub use day11::*;
+pub use day12::*;
 
 use axum::{
     debug_handler, extract,
