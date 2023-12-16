@@ -1,8 +1,7 @@
+use crate::prelude::*;
 use axum_extra::extract::Multipart;
 
-use crate::errors::AppError;
-
-pub async fn red_pixels(mut multipart: Multipart) -> anyhow::Result<String, AppError> {
+pub async fn red_pixels(mut multipart: Multipart) -> Result<String> {
     let mut red_counter = 0;
     if let Some(field) = multipart.next_field().await? {
         let data = field.bytes().await?;
