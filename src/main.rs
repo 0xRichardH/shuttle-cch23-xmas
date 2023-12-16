@@ -3,11 +3,17 @@ use axum::{
     routing::{get, post},
     Router,
 };
-use cch23_xmas::handlers::{self};
+use cch23_xmas::{
+    app_state::AppState,
+    handlers::{self},
+};
+use shuttle_persist::PersistInstance;
 use tower_http::{services::ServeDir, trace::TraceLayer};
 
 #[shuttle_runtime::main]
-async fn main() -> shuttle_axum::ShuttleAxum {
+async fn main(#[shuttle_persist::Persist] persist: PersistInstance) -> shuttle_axum::ShuttleAxum {
+    let app_state = AppState::new(persist);
+
     let router = Router::new()
         .route("/", get(handlers::hello_world))
         .route("/-1/error", get(handlers::fake_error))
@@ -21,7 +27,12 @@ async fn main() -> shuttle_axum::ShuttleAxum {
         .route("/8/drop/:number", get(handlers::drop_pokemon))
         .nest_service("/11/assets/", ServeDir::new("assets"))
         .route("/11/red_pixels", post(handlers::red_pixels))
+        .route("/12/save/:time_key", post(handlers::persist_time))
+        .route("/12/load/:time_key", get(handlers::load_time))
+        .route("/12/ulids", post(handlers::convert_ulids_to_uuids))
+        .route("/12/ulids/:weekday", post(handlers::count_ulids))
         .fallback(handlers::not_found_handler)
+        .with_state(app_state)
         .layer(
             TraceLayer::new_for_http().make_span_with(|request: &Request<_>| {
                 // Log the matched route's path (with placeholders not filled in).

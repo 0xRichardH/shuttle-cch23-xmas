@@ -1,31 +1,39 @@
+use std::fmt::Display;
+
 use axum::{
     http::StatusCode,
     response::{IntoResponse, Response},
 };
 
-// Make our own error that wraps `anyhow::Error`.
-pub struct AppError(anyhow::Error);
+#[derive(thiserror::Error, Debug)]
+pub enum AppError {
+    #[error(transparent)]
+    AnyhowError(#[from] anyhow::Error),
+    #[error(transparent)]
+    ImageError(#[from] image::ImageError),
+    #[error(transparent)]
+    MultipartError(#[from] axum_extra::extract::multipart::MultipartError),
+    #[error(transparent)]
+    SerdeJsonError(#[from] serde_json::Error),
+
+    #[error("Bad request: {0}")]
+    BadRequest(String),
+}
 
 // Tell axum how to convert `AppError` into a response.
 impl IntoResponse for AppError {
     fn into_response(self) -> Response {
-        tracing::error!("Application error: {}", self.0);
+        tracing::error!("Application error: {}", self);
 
-        (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            format!("Something went wrong: {}", self.0),
-        )
-            .into_response()
-    }
-}
-
-// This enables using `?` on functions that return `Result<_, anyhow::Error>` to turn them into
-// `Result<_, AppError>`. That way you don't need to do that manually.
-impl<E> From<E> for AppError
-where
-    E: Into<anyhow::Error>,
-{
-    fn from(err: E) -> Self {
-        Self(err.into())
+        match self {
+            AppError::BadRequest(msg) => {
+                (StatusCode::BAD_REQUEST, format!("Bad request: {}", msg)).into_response()
+            }
+            _ => (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                format!("Something went wrong: {}", self),
+            )
+                .into_response(),
+        }
     }
 }

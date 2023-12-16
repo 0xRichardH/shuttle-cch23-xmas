@@ -7,7 +7,7 @@ use base64::{engine::general_purpose, Engine};
 use serde::Deserialize;
 use serde_json::json;
 
-use crate::errors::AppError;
+use crate::prelude::*;
 
 #[derive(Debug, Deserialize)]
 struct BakeCookieRequest {
@@ -16,7 +16,7 @@ struct BakeCookieRequest {
 }
 
 /// task 1
-pub async fn cookies_recipe(TypedHeader(cookie): TypedHeader<Cookie>) -> Result<String, AppError> {
+pub async fn cookies_recipe(TypedHeader(cookie): TypedHeader<Cookie>) -> Result<String> {
     let recipe = get_cookies_recipe(&cookie)?;
 
     Ok(recipe)
@@ -26,7 +26,7 @@ pub async fn cookies_recipe(TypedHeader(cookie): TypedHeader<Cookie>) -> Result<
 #[debug_handler]
 pub async fn bake_cookies(
     TypedHeader(cookie): TypedHeader<Cookie>,
-) -> Result<Json<serde_json::Value>, AppError> {
+) -> Result<Json<serde_json::Value>> {
     let recipe_and_pantry =
         get_cookies_recipe(&cookie).context("get recipe_and_pantry from cookies")?;
     tracing::debug!("recipe_and_pantry {:?}", recipe_and_pantry);

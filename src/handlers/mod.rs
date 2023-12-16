@@ -1,8 +1,11 @@
 mod day07;
 mod day11;
+mod day12;
 pub use day07::*;
 pub use day11::*;
+pub use day12::*;
 
+use crate::prelude::*;
 use axum::{
     debug_handler, extract,
     http::{StatusCode, Uri},
@@ -14,7 +17,7 @@ use serde::Serialize;
 use serde_json::json;
 use tracing::trace;
 
-use crate::{errors::AppError, Pokemon, Reindeer, ReindeerContestStats};
+use crate::{Pokemon, Reindeer, ReindeerContestStats};
 
 pub async fn not_found_handler(uri: Uri) -> (StatusCode, Json<serde_json::Value>) {
     tracing::info!("path not found: {}", uri.path());
@@ -131,15 +134,13 @@ pub async fn count_elf(body: String) -> Json<CountElfResponse> {
     })
 }
 
-pub async fn get_pokemon_weight(
-    extract::Path(number): extract::Path<u64>,
-) -> Result<String, AppError> {
+pub async fn get_pokemon_weight(extract::Path(number): extract::Path<u64>) -> Result<String> {
     let pokemon: Pokemon = get_pokemon_by_number(number).await?;
 
     Ok(convert_hg_to_kg(pokemon.weight).to_string())
 }
 
-pub async fn drop_pokemon(extract::Path(number): extract::Path<u64>) -> Result<String, AppError> {
+pub async fn drop_pokemon(extract::Path(number): extract::Path<u64>) -> Result<String> {
     let pokemon = get_pokemon_by_number(number).await?;
     let weight = convert_hg_to_kg(pokemon.weight);
     let result = weight * (9.825 * 20f64).sqrt();
