@@ -29,6 +29,7 @@ async fn main(#[shuttle_persist::Persist] persist: PersistInstance) -> shuttle_a
         .route("/11/red_pixels", post(handlers::red_pixels))
         .route("/12/save/:time_key", post(handlers::persist_time))
         .route("/12/load/:time_key", get(handlers::load_time))
+        .route("/12/ulids", post(handlers::convert_ulids_to_uuids))
         .fallback(handlers::not_found_handler)
         .with_state(app_state)
         .layer(
