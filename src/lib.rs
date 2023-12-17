@@ -2,6 +2,7 @@ pub mod app_state;
 pub mod errors;
 pub mod handlers;
 pub mod prelude;
+pub mod repo;
 
 use std::{collections::HashMap, fmt::Display};
 

@@ -1,5 +1,3 @@
-use std::fmt::Display;
-
 use axum::{
     http::StatusCode,
     response::{IntoResponse, Response},
@@ -15,6 +13,10 @@ pub enum AppError {
     MultipartError(#[from] axum_extra::extract::multipart::MultipartError),
     #[error(transparent)]
     SerdeJsonError(#[from] serde_json::Error),
+    #[error(transparent)]
+    SqlxError(#[from] sqlx::Error),
+    #[error(transparent)]
+    SqlxMigrationError(#[from] sqlx::migrate::MigrateError),
 
     #[error("Bad request: {0}")]
     BadRequest(String),
