@@ -8,11 +8,15 @@ use cch23_xmas::{
     handlers::{self},
 };
 use shuttle_persist::PersistInstance;
+use sqlx::PgPool;
 use tower_http::{services::ServeDir, trace::TraceLayer};
 
 #[shuttle_runtime::main]
-async fn main(#[shuttle_persist::Persist] persist: PersistInstance) -> shuttle_axum::ShuttleAxum {
-    let app_state = AppState::new(persist);
+async fn main(
+    #[shuttle_persist::Persist] persist: PersistInstance,
+    #[shuttle_shared_db::Postgres] db_pool: PgPool,
+) -> shuttle_axum::ShuttleAxum {
+    let app_state = AppState::new(persist, db_pool);
 
     let router = Router::new()
         .route("/", get(handlers::hello_world))
@@ -31,6 +35,7 @@ async fn main(#[shuttle_persist::Persist] persist: PersistInstance) -> shuttle_a
         .route("/12/load/:time_key", get(handlers::load_time))
         .route("/12/ulids", post(handlers::convert_ulids_to_uuids))
         .route("/12/ulids/:weekday", post(handlers::count_ulids))
+        .route("/13/sql", get(handlers::db_health_check))
         .fallback(handlers::not_found_handler)
         .with_state(app_state)
         .layer(
