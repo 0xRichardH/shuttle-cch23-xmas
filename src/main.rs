@@ -36,6 +36,9 @@ async fn main(
         .route("/12/ulids", post(handlers::convert_ulids_to_uuids))
         .route("/12/ulids/:weekday", post(handlers::count_ulids))
         .route("/13/sql", get(handlers::db_health_check))
+        .route("/13/reset", post(handlers::reset_orders_bd))
+        .route("/13/orders", post(handlers::create_orders))
+        .route("/13/orders/total", get(handlers::get_total_orders))
         .fallback(handlers::not_found_handler)
         .with_state(app_state)
         .layer(
