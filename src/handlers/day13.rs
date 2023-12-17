@@ -71,3 +71,14 @@ pub async fn get_total_orders(State(state): State<AppState>) -> Result<Json<serd
         .await?;
     Ok(Json(json!({ "total": r })))
 }
+
+pub async fn get_popular_gift(State(state): State<AppState>) -> Result<Json<serde_json::Value>> {
+    let result = sqlx::query_as::<_, (String,)>("SELECT gift_name, SUM(quantity) AS quantity FROM orders GROUP BY gift_name ORDER BY quantity DESC LIMIT 1")
+        .fetch_optional(&state.db)
+        .await?;
+    if let Some((name,)) = result {
+        Ok(Json(json!({ "popular": name })))
+    } else {
+        Ok(Json(json!({ "popular": null })))
+    }
+}

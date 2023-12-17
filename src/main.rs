@@ -39,6 +39,7 @@ async fn main(
         .route("/13/reset", post(handlers::reset_orders_bd))
         .route("/13/orders", post(handlers::create_orders))
         .route("/13/orders/total", get(handlers::get_total_orders))
+        .route("/13/orders/popular", get(handlers::get_popular_gift))
         .fallback(handlers::not_found_handler)
         .with_state(app_state)
         .layer(
