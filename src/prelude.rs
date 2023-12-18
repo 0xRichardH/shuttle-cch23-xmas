@@ -7,3 +7,6 @@ pub type Result<T> = core::result::Result<T, AppError>;
 /// Generic wrapper
 /// for external types to type From/TryFrom conversions
 pub struct W<T>(pub T);
+
+/// Add alias for `format!`
+pub use std::format as f;

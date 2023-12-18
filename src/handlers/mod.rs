@@ -6,6 +6,7 @@ mod day08;
 mod day11;
 mod day12;
 mod day13;
+mod day14;
 
 pub use day01::*;
 pub use day04::*;
@@ -15,6 +16,7 @@ pub use day08::*;
 pub use day11::*;
 pub use day12::*;
 pub use day13::*;
+pub use day14::*;
 
 use axum::{
     http::{StatusCode, Uri},

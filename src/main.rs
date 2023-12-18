@@ -40,6 +40,8 @@ async fn main(
         .route("/13/orders", post(handlers::create_orders))
         .route("/13/orders/total", get(handlers::get_total_orders))
         .route("/13/orders/popular", get(handlers::get_popular_gift))
+        .route("/14/unsafe", post(handlers::render_unsafe_html))
+        .route("/14/safe", post(handlers::render_safe_html))
         .fallback(handlers::not_found_handler)
         .with_state(app_state)
         .layer(
