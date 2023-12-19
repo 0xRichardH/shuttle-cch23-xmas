@@ -42,6 +42,7 @@ async fn main(
         .route("/13/orders/popular", get(handlers::get_popular_gift))
         .route("/14/unsafe", post(handlers::render_unsafe_html))
         .route("/14/safe", post(handlers::render_safe_html))
+        .route("/15/nice", post(handlers::password_validator))
         .fallback(handlers::not_found_handler)
         .with_state(app_state)
         .layer(

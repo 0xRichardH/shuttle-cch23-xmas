@@ -5,7 +5,7 @@ use axum::{
     extract::{self, Path, State},
     Json,
 };
-use chrono::{DateTime, Datelike, Utc, Weekday};
+use chrono::{DateTime, Datelike, Utc};
 use serde_json::json;
 use ulid::Ulid;
 use uuid::Uuid;

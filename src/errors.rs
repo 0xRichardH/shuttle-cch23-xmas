@@ -28,9 +28,7 @@ impl IntoResponse for AppError {
         tracing::error!("Application error: {}", self);
 
         match self {
-            AppError::BadRequest(msg) => {
-                (StatusCode::BAD_REQUEST, format!("Bad request: {}", msg)).into_response()
-            }
+            AppError::BadRequest(msg) => (StatusCode::BAD_REQUEST, msg).into_response(),
             _ => (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 format!("Something went wrong: {}", self),

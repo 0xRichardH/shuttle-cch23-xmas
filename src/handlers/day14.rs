@@ -3,12 +3,12 @@ use axum::{extract, response::Html};
 use serde::Deserialize;
 
 #[derive(Deserialize, Debug)]
-pub struct RenderUnsafeHtmlReq {
+pub struct RenderHtmlReq {
     content: String,
 }
 
 pub async fn render_unsafe_html(
-    extract::Json(payload): extract::Json<RenderUnsafeHtmlReq>,
+    extract::Json(payload): extract::Json<RenderHtmlReq>,
 ) -> Html<String> {
     tracing::debug!("render_unsafe_html: {:?}", payload);
 
@@ -26,7 +26,7 @@ pub async fn render_unsafe_html(
 }
 
 pub async fn render_safe_html(
-    extract::Json(payload): extract::Json<RenderUnsafeHtmlReq>,
+    extract::Json(payload): extract::Json<RenderHtmlReq>,
 ) -> Html<String> {
     tracing::debug!("render_unsafe_html: {:?}", payload);
 
