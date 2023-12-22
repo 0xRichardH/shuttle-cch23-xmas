@@ -43,6 +43,7 @@ async fn main(
         .route("/14/unsafe", post(handlers::render_unsafe_html))
         .route("/14/safe", post(handlers::render_safe_html))
         .route("/15/nice", post(handlers::password_validator))
+        .route("/15/game", post(handlers::password_game_validator))
         .fallback(handlers::not_found_handler)
         .with_state(app_state)
         .layer(

@@ -20,6 +20,8 @@ pub enum AppError {
 
     #[error("Bad request: {0}")]
     BadRequest(String),
+    #[error("{{\"result\":\"naughty\",\"reason\":\"{0}\"}}")]
+    InvalidPasswordGameInput(String),
 }
 
 // Tell axum how to convert `AppError` into a response.
