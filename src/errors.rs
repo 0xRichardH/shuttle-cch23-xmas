@@ -20,8 +20,8 @@ pub enum AppError {
 
     #[error("Bad request: {0}")]
     BadRequest(String),
-    #[error("{{\"result\":\"naughty\",\"reason\":\"{0}\"}}")]
-    InvalidPasswordGameInput(String),
+    #[error("{{\"result\":\"naughty\",\"reason\":\"{1}\"}}")]
+    InvalidPasswordGameInput(StatusCode, String),
 }
 
 // Tell axum how to convert `AppError` into a response.
@@ -31,6 +31,9 @@ impl IntoResponse for AppError {
 
         match self {
             AppError::BadRequest(msg) => (StatusCode::BAD_REQUEST, msg).into_response(),
+            AppError::InvalidPasswordGameInput(status, _) => {
+                (status, self.to_string()).into_response()
+            }
             _ => (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 format!("Something went wrong: {}", self),

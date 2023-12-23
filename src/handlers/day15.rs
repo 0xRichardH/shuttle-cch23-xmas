@@ -1,5 +1,5 @@
 use crate::prelude::*;
-use axum::{extract, Json};
+use axum::{extract, http::StatusCode, Json};
 use regex::Regex;
 use serde::Deserialize;
 use serde_json::json;
@@ -57,17 +57,20 @@ pub async fn password_game_validator(
 ) -> Result<Json<serde_json::Value>> {
     tracing::debug!("password_game_validator: {:?}", payload);
 
-    if let Err(e) = valid_game_input(payload.input.as_str()) {
-        Err(AppError::BadRequest(e.to_string()))
-    } else {
-        Ok(Json(json!({"result": "that's a nice password"})))
-    }
+    valid_game_input(payload.input.as_str())?;
+
+    Ok(Json(
+        json!({"result": "nice", "reason": "that's a nice password"}),
+    ))
 }
 
 fn valid_game_input(input: &str) -> Result<()> {
     // Rule 1: must be at least 8 characters long
     if input.len() < 8 {
-        return Err(AppError::InvalidPasswordGameInput("8 chars".to_string()));
+        return Err(AppError::InvalidPasswordGameInput(
+            StatusCode::BAD_REQUEST,
+            "8 chars".to_string(),
+        ));
     }
 
     let mut has_contain_uppercase = false;
@@ -105,18 +108,23 @@ fn valid_game_input(input: &str) -> Result<()> {
     // Rule 2: must contain uppercase letters, lowercase letters, and digits
     if !has_contain_uppercase || !has_contain_lowercase || !has_contain_digit {
         return Err(AppError::InvalidPasswordGameInput(
+            StatusCode::BAD_REQUEST,
             "more types of chars".to_string(),
         ));
     }
 
     // Rule 3: must contain at least 5 digits
     if digits_counter < 5 {
-        return Err(AppError::InvalidPasswordGameInput("55555".to_string()));
+        return Err(AppError::InvalidPasswordGameInput(
+            StatusCode::BAD_REQUEST,
+            "55555".to_string(),
+        ));
     }
 
     // Rule 4: all integers (sequences of consecutive digits) in the string must add up to 2023
     if !sum_of_digits_equals_2023(input) {
         return Err(AppError::InvalidPasswordGameInput(
+            StatusCode::BAD_REQUEST,
             "math is hard".to_string(),
         ));
     }
@@ -124,32 +132,33 @@ fn valid_game_input(input: &str) -> Result<()> {
     // Rule 5: must contain the letters j, o, and y in that order and in no other order
     if joy.len() < 3 || joy.iter().collect::<String>() != "joy" {
         return Err(AppError::InvalidPasswordGameInput(
+            StatusCode::NOT_ACCEPTABLE,
             "not joyful enough".to_string(),
         ));
     }
 
     // Rule 6: must contain a letter that repeats with exactly one other letter between them (like xyx)
-    let repeat_pattern = Regex::new(r"(.).\\1");
-    if repeat_pattern.is_err() {
-        tracing::error!("Failed to compile regex: {:?}", repeat_pattern);
+    if !has_repeating_pattern(input) {
         return Err(AppError::InvalidPasswordGameInput(
-            "regex error".to_string(),
-        ));
-    }
-    if !repeat_pattern.unwrap().is_match(input) {
-        return Err(AppError::InvalidPasswordGameInput(
+            StatusCode::UNAVAILABLE_FOR_LEGAL_REASONS,
             "illegal: no sandwich".to_string(),
         ));
     }
 
     // Rule 7: must contain at least one unicode character in the range [U+2980, U+2BFF]
     if !has_contain_unicode {
-        return Err(AppError::InvalidPasswordGameInput("outranged".to_string()));
+        return Err(AppError::InvalidPasswordGameInput(
+            StatusCode::RANGE_NOT_SATISFIABLE,
+            "outranged".to_string(),
+        ));
     }
 
     // Rule 8: must contain at least one emoji
     if !has_emoji {
-        return Err(AppError::InvalidPasswordGameInput("😳".to_string()));
+        return Err(AppError::InvalidPasswordGameInput(
+            StatusCode::UPGRADE_REQUIRED,
+            "😳".to_string(),
+        ));
     }
 
     // Rule 9: the hexadecimal representation of the sha256 hash of the string must end with an a
@@ -158,6 +167,7 @@ fn valid_game_input(input: &str) -> Result<()> {
     let result = hasher.finalize();
     if !format!("{:x}", result).ends_with('a') {
         return Err(AppError::InvalidPasswordGameInput(
+            StatusCode::IM_A_TEAPOT,
             "not a coffee brewer".to_string(),
         ));
     }
@@ -171,4 +181,21 @@ fn sum_of_digits_equals_2023(input: &str) -> bool {
         .map(|mat| mat.as_str().parse::<i32>().unwrap_or(0))
         .sum::<i32>()
         == 2023
+}
+
+fn has_repeating_pattern(input: &str) -> bool {
+    let chars: Vec<char> = input.chars().collect();
+    let len = chars.len();
+
+    for i in 0..len {
+        if !chars[i].is_alphabetic() {
+            continue;
+        }
+
+        if i + 2 < len && chars[i] == chars[i + 2] {
+            return true;
+        }
+    }
+
+    false
 }
