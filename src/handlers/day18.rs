@@ -1,5 +1,7 @@
+use std::collections::HashMap;
+
 use anyhow::Context;
-use axum::extract::{self, State};
+use axum::extract::{self, Path, State};
 use axum::Json;
 use serde::Serialize;
 use sqlx::prelude::FromRow;
@@ -92,4 +94,64 @@ pub async fn get_regions_orders_summary(
     .await?;
 
     Ok(Json(data))
+}
+
+#[derive(Debug, Serialize)]
+pub struct RegionsTopGifts {
+    region: String,
+    top_gifts: Vec<String>,
+}
+
+pub async fn get_regions_top_gifts(
+    State(state): State<AppState>,
+    Path(number): Path<u32>,
+) -> Result<Json<Vec<RegionsTopGifts>>> {
+    let mut sql = String::from("SELECT name, NULL FROM regions ORDER BY name");
+    if number > 0 {
+        sql = f!(
+        "
+WITH added_row_number AS (
+  SELECT 
+    regions.name AS region, 
+    orders.gift_name AS gift_name, 
+    ROW_NUMBER() OVER(PARTITION BY regions.name ORDER BY SUM(orders.quantity) DESC, orders.gift_name ASC) AS row_number
+  FROM orders FULL JOIN regions ON orders.region_id = regions.id
+  GROUP BY 1, 2
+  ORDER BY 1, 3 DESC
+)
+SELECT region, gift_name FROM added_row_number WHERE row_number <= {} ORDER BY region, row_number;
+        ",
+        number
+    );
+    }
+
+    let data = sqlx::query_as::<_, (Option<String>, Option<String>)>(&sql)
+        .fetch_all(&state.db)
+        .await?;
+    tracing::debug!("Top gifts of Regions (raw data): {:?}", data);
+
+    let mut top_gifts = HashMap::<String, Vec<String>>::new();
+    for (region, gift) in data {
+        let Some(region) = region else {
+            continue;
+        };
+        let v = top_gifts.entry(region).or_default();
+        if let Some(gift) = gift {
+            v.push(gift);
+        }
+    }
+    let mut result = top_gifts
+        .into_iter()
+        .map(|(r, g)| RegionsTopGifts {
+            region: r,
+            top_gifts: g,
+        })
+        .collect::<Vec<RegionsTopGifts>>();
+    result.sort_by(|a, b| a.region.cmp(&b.region));
+    tracing::debug!(
+        "Top gifts of Regions: {:?}",
+        serde_json::to_string(&result)?
+    );
+
+    Ok(Json(result))
 }

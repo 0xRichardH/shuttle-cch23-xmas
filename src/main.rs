@@ -51,6 +51,10 @@ async fn main(
             "/18/regions/total",
             get(handlers::get_regions_orders_summary),
         )
+        .route(
+            "/18/regions/top_list/:number",
+            get(handlers::get_regions_top_gifts),
+        )
         .fallback(handlers::not_found_handler)
         .with_state(app_state)
         .layer(
