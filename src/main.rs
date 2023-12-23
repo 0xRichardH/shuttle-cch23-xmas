@@ -55,6 +55,7 @@ async fn main(
             "/18/regions/top_list/:number",
             get(handlers::get_regions_top_gifts),
         )
+        .route("/19/ws/ping", get(handlers::ws_handler))
         .fallback(handlers::not_found_handler)
         .with_state(app_state)
         .layer(
