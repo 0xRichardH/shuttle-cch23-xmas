@@ -15,7 +15,7 @@ pub async fn db_health_check(State(state): State<AppState>) -> Result<String> {
     Ok(r.to_string())
 }
 
-pub async fn reset_orders_bd(State(state): State<AppState>) -> Result<()> {
+pub async fn reset_orders_db(State(state): State<AppState>) -> Result<()> {
     let mut transaction = state.db.begin().await.context("start transaction")?;
 
     sqlx::query("DROP TABLE IF EXISTS orders")
@@ -46,6 +46,10 @@ pub async fn create_orders(
     extract::Json(orders): extract::Json<Vec<Order>>,
 ) -> Result<()> {
     tracing::debug!("Creating orders: {:?}", orders);
+
+    if orders.is_empty() {
+        return Ok(());
+    }
 
     let mut query_builder =
         QueryBuilder::<Postgres>::new("INSERT INTO orders (id, region_id, gift_name, quantity)");

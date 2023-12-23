@@ -36,7 +36,7 @@ async fn main(
         .route("/12/ulids", post(handlers::convert_ulids_to_uuids))
         .route("/12/ulids/:weekday", post(handlers::count_ulids))
         .route("/13/sql", get(handlers::db_health_check))
-        .route("/13/reset", post(handlers::reset_orders_bd))
+        .route("/13/reset", post(handlers::reset_orders_db))
         .route("/13/orders", post(handlers::create_orders))
         .route("/13/orders/total", get(handlers::get_total_orders))
         .route("/13/orders/popular", get(handlers::get_popular_gift))
@@ -44,6 +44,13 @@ async fn main(
         .route("/14/safe", post(handlers::render_safe_html))
         .route("/15/nice", post(handlers::password_validator))
         .route("/15/game", post(handlers::password_game_validator))
+        .route("/18/reset", post(handlers::reset_orders_and_regions_db))
+        .route("/18/orders", post(handlers::create_orders))
+        .route("/18/regions", post(handlers::create_regions))
+        .route(
+            "/18/regions/total",
+            get(handlers::get_regions_orders_summary),
+        )
         .fallback(handlers::not_found_handler)
         .with_state(app_state)
         .layer(

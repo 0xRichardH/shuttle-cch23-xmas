@@ -7,3 +7,9 @@ pub struct Order {
     pub gift_name: String,
     pub quantity: i32,
 }
+
+#[derive(Debug, Deserialize)]
+pub struct Region {
+    pub id: i32,
+    pub name: String,
+}
