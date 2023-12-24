@@ -105,7 +105,7 @@ async fn handle_chatroom_socket(
                     tracing::error!("Room {}: User {}: Error sending messages", room_id, user.as_str());
                 },
             }
-
+            recv_task.abort();
         },
 
         rv_b = &mut recv_task => {
@@ -117,8 +117,15 @@ async fn handle_chatroom_socket(
                     tracing::error!("Room {}: User {}: Error receiving messages", room_id, user.as_str());
                 },
             }
+            send_task.abort();
         }
     }
+
+    tracing::info!(
+        "Room {}: User {}: Done (websocket destroyed)",
+        room_id,
+        user.as_str()
+    );
 }
 
 #[derive(Debug, Deserialize)]
@@ -198,50 +205,71 @@ async fn read_from_chatroom(
             msg
         );
 
-        if let Message::Text(t) = msg.unwrap() {
-            let Ok(recv_msg) = serde_json::from_str::<RecvMsg>(t.as_str()) else {
-                tracing::error!(
-                    "Room {}: User {}: Failed to parse message: {:?}",
-                    room_id,
-                    user.clone(),
-                    t
-                );
-                continue;
-            };
+        match msg.unwrap() {
+            Message::Text(t) => {
+                let Ok(recv_msg) = serde_json::from_str::<RecvMsg>(t.as_str()) else {
+                    tracing::error!(
+                        "Room {}: User {}: Failed to parse message: {:?}",
+                        room_id,
+                        user.clone(),
+                        t
+                    );
+                    continue;
+                };
 
-            tracing::debug!(
-                "Room {}: User {}: Received message: {:?}",
-                room_id,
-                user.clone(),
-                recv_msg
-            );
-
-            if recv_msg.message.len() > 128 {
-                tracing::error!(
-                    "Room {}: User {}: Message too long: {:?}",
+                tracing::debug!(
+                    "Room {}: User {}: Received message: {:?}",
                     room_id,
                     user.clone(),
                     recv_msg
                 );
-                continue;
+
+                if recv_msg.message.len() > 128 {
+                    tracing::error!(
+                        "Room {}: User {}: Message too long: {:?}",
+                        room_id,
+                        user.clone(),
+                        recv_msg
+                    );
+                    continue;
+                }
+
+                let body = ChatroomMessageBody {
+                    user: user.clone(),
+                    message: recv_msg.message,
+                };
+                let send_msg = ChatroomMessage {
+                    room: room_id,
+                    body,
+                };
+                if let Err(e) = tx.send(send_msg) {
+                    tracing::error!(
+                        "Room {}: User {}: Failed to send message: {:?}",
+                        room_id,
+                        user.clone(),
+                        e
+                    )
+                }
             }
 
-            let body = ChatroomMessageBody {
-                user: user.clone(),
-                message: recv_msg.message,
-            };
-            let send_msg = ChatroomMessage {
-                room: room_id,
-                body,
-            };
-            if let Err(e) = tx.send(send_msg) {
-                tracing::error!(
-                    "Room {}: User {}: Failed to send message: {:?}",
-                    room_id,
-                    user.clone(),
-                    e
-                )
+            Message::Close(c) => {
+                if let Some(cf) = c {
+                    tracing::info!(
+                        "Room {}: User {}: Received close message: {:?}",
+                        room_id,
+                        user,
+                        cf
+                    );
+                } else {
+                    tracing::info!(
+                        "Room {}: User {}: Received close message without CloseFrame",
+                        room_id,
+                        user
+                    );
+                }
+                break;
             }
+            _ => (),
         }
     }
 }
