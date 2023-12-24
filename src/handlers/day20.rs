@@ -1,8 +1,4 @@
-use std::{
-    fs::{self, File},
-    io::Cursor,
-    path::PathBuf,
-};
+use std::{fs, io::Cursor, path::PathBuf};
 
 use anyhow::Context;
 use axum::body;
@@ -53,7 +49,7 @@ pub async fn get_cookie_from_archive_file(bytes: body::Bytes) -> Result<String> 
         tracing::trace!("commit: {} {}", commit.author(), commit.id());
 
         // checkout the commit
-        checkout_to_commit(&repo, oid).context("checkout commit")?;
+        checkout_to_commit(&repo, &commit)?;
 
         // check if the cookie exists
         let has_found_cookie = has_found_cookie(&path).context("check for cookie")?;
@@ -92,13 +88,15 @@ fn prepare_revwalk_for_traversal(repo: &git2::Repository) -> Result<git2::Revwal
     Ok(revwalk)
 }
 
-fn checkout_to_commit(repo: &git2::Repository, oid: git2::Oid) -> Result<()> {
-    let commit_obj = repo
-        .find_object(oid, Some(git2::ObjectType::Commit))
-        .context("find object")?;
-    repo.checkout_tree(&commit_obj, None)
-        .context("checkout tree")?;
-    repo.set_head_detached(oid).context("set head detached")?;
+fn checkout_to_commit(repo: &git2::Repository, commit: &git2::Commit) -> Result<()> {
+    let tree = commit.tree().context("get commit tree")?;
+    repo.checkout_tree(
+        tree.as_object(),
+        Some(&mut git2::build::CheckoutBuilder::new().force()),
+    )
+    .context("checkout tree")?;
+    repo.set_head_detached(commit.id())
+        .context("set head detached")?;
 
     Ok(())
 }
@@ -110,7 +108,6 @@ fn has_found_cookie(path: &PathBuf) -> Result<bool> {
 
     for entry in fs::read_dir(path).context("read dir")? {
         let path = entry?.path();
-        dbg!(&path);
         if path.file_name() == Some(".git".as_ref()) {
             continue;
         }
