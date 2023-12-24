@@ -56,6 +56,7 @@ async fn main(
             get(handlers::get_regions_top_gifts),
         )
         .route("/19/ws/ping", get(handlers::ws_handler))
+        .route("/19/ws/room/:room_id/user/:user", get(handlers::chatroom))
         .fallback(handlers::not_found_handler)
         .with_state(app_state)
         .layer(
