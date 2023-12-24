@@ -60,7 +60,11 @@ async fn main(
         .route("/19/views", get(handlers::get_tweet_view_count))
         .route("/19/reset", post(handlers::reset_tweet_view_count))
         .route("/20/archive_files", post(handlers::count_archive_files))
-        .route("/20/archive_files_size", post(handlers::count_archive_files_size))
+        .route(
+            "/20/archive_files_size",
+            post(handlers::count_archive_files_size),
+        )
+        .route("/20/cookie", post(handlers::get_cookie_from_archive_file))
         .fallback(handlers::not_found_handler)
         .with_state(app_state)
         .layer(

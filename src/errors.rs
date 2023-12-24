@@ -24,6 +24,8 @@ pub enum AppError {
     BadRequest(String),
     #[error("{{\"result\":\"naughty\",\"reason\":\"{1}\"}}")]
     InvalidPasswordGameInput(StatusCode, String),
+    #[error("An internal error occurred: {0}")]
+    Internal(anyhow::Error),
 }
 
 // Tell axum how to convert `AppError` into a response.
