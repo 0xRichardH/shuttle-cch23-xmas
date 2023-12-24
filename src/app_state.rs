@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
 use shuttle_persist::PersistInstance;
 use tokio::sync::broadcast;
@@ -8,6 +8,7 @@ pub struct AppState {
     pub persist: Arc<PersistInstance>,
     pub db: sqlx::PgPool,
     pub chatroom_broadcaster: broadcast::Sender<ChatroomMessage>,
+    pub chatroom_counter: Arc<Mutex<u64>>,
 }
 
 #[derive(Debug, Clone, serde::Serialize)]
@@ -29,6 +30,7 @@ impl AppState {
             persist: Arc::new(persist),
             db,
             chatroom_broadcaster,
+            chatroom_counter: Arc::new(Mutex::new(0)),
         }
     }
 }

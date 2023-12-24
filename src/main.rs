@@ -57,6 +57,8 @@ async fn main(
         )
         .route("/19/ws/ping", get(handlers::ws_handler))
         .route("/19/ws/room/:room_id/user/:user", get(handlers::chatroom))
+        .route("/19/views", get(handlers::get_tweet_view_count))
+        .route("/19/reset", post(handlers::reset_tweet_view_count))
         .fallback(handlers::not_found_handler)
         .with_state(app_state)
         .layer(

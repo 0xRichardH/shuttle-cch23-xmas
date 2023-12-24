@@ -1,3 +1,5 @@
+use std::sync::{Arc, Mutex};
+
 use axum::{
     extract::{
         ws::{Message, WebSocket},
@@ -13,6 +15,7 @@ use serde::Deserialize;
 use tokio::sync::broadcast;
 
 use crate::app_state::{AppState, ChatroomMessage, ChatroomMessageBody};
+use crate::prelude::*;
 
 pub async fn ws_handler(ws: WebSocketUpgrade) -> impl IntoResponse {
     tracing::info!("Serving websocket");
@@ -59,8 +62,13 @@ pub async fn chatroom(
     State(state): State<AppState>,
 ) -> impl IntoResponse {
     tracing::info!("Serving chatroom {} for user {}", room_id, user);
+
+    let tweet_counter = state.chatroom_counter;
     let chatroom_broadcaster = state.chatroom_broadcaster;
-    ws.on_upgrade(move |socket| handle_chatroom_socket(socket, room_id, user, chatroom_broadcaster))
+
+    ws.on_upgrade(move |socket| {
+        handle_chatroom_socket(socket, room_id, user, chatroom_broadcaster, tweet_counter)
+    })
 }
 
 async fn handle_chatroom_socket(
@@ -68,6 +76,7 @@ async fn handle_chatroom_socket(
     room_id: u64,
     user: String,
     chatroom_broadcaster: broadcast::Sender<ChatroomMessage>,
+    tweet_counter: Arc<Mutex<u64>>,
 ) {
     let rx = chatroom_broadcaster.subscribe();
 
@@ -78,7 +87,13 @@ async fn handle_chatroom_socket(
         user.clone(),
         chatroom_broadcaster,
     ));
-    let mut recv_task = tokio::spawn(write_to_chatroom(sender, room_id, user.clone(), rx));
+    let mut recv_task = tokio::spawn(write_to_chatroom(
+        sender,
+        room_id,
+        user.clone(),
+        rx,
+        tweet_counter,
+    ));
 
     tokio::select! {
         rv_a = &mut send_task => {
@@ -116,6 +131,7 @@ async fn write_to_chatroom(
     room_id: u64,
     user: String,
     mut rx: broadcast::Receiver<ChatroomMessage>,
+    tweet_counter: Arc<Mutex<u64>>,
 ) {
     while let Ok(send_msg) = rx.recv().await {
         if send_msg.room != room_id {
@@ -137,6 +153,23 @@ async fn write_to_chatroom(
                 user,
                 e
             )
+        } else {
+            if let Ok(mut tweet_counter) = tweet_counter.lock() {
+                *tweet_counter += 1;
+            } else {
+                tracing::error!(
+                    "Room {}: User {}: Failed to lock mutex and update tweet counter",
+                    room_id,
+                    user
+                );
+            }
+
+            tracing::info!(
+                "Room {}: User {}: Received message: {:?}",
+                room_id,
+                user,
+                send_msg
+            );
         }
     }
 }
@@ -183,6 +216,16 @@ async fn read_from_chatroom(
                 recv_msg
             );
 
+            if recv_msg.message.len() > 128 {
+                tracing::error!(
+                    "Room {}: User {}: Message too long: {:?}",
+                    room_id,
+                    user.clone(),
+                    recv_msg
+                );
+                continue;
+            }
+
             let body = ChatroomMessageBody {
                 user: user.clone(),
                 message: recv_msg.message,
@@ -201,4 +244,23 @@ async fn read_from_chatroom(
             }
         }
     }
+}
+
+pub async fn get_tweet_view_count(State(state): State<AppState>) -> Result<String> {
+    let count = state
+        .chatroom_counter
+        .lock()
+        .map_err(|e| anyhow::anyhow!("failed to lock mutex: {e}"))?;
+    tracing::info!("Tweet view count: {}", count);
+    Ok(count.to_string())
+}
+
+pub async fn reset_tweet_view_count(State(state): State<AppState>) -> Result<()> {
+    let mut count = state
+        .chatroom_counter
+        .lock()
+        .map_err(|e| anyhow::anyhow!("failed to lock mutex: {e}"))?;
+    *count = 0;
+
+    Ok(())
 }
