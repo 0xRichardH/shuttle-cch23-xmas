@@ -1,6 +1,6 @@
 use std::sync::{
     atomic::{self, AtomicU64},
-    Arc, Mutex,
+    Arc,
 };
 
 use axum::{
