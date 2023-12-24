@@ -9,10 +9,10 @@ use futures::{
     stream::{SplitSink, SplitStream},
     SinkExt, StreamExt,
 };
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 use tokio::sync::broadcast;
 
-use crate::app_state::AppState;
+use crate::app_state::{AppState, ChatroomMessage, ChatroomMessageBody};
 
 pub async fn ws_handler(ws: WebSocketUpgrade) -> impl IntoResponse {
     tracing::info!("Serving websocket");
@@ -59,14 +59,25 @@ pub async fn chatroom(
     State(state): State<AppState>,
 ) -> impl IntoResponse {
     tracing::info!("Serving chatroom {} for user {}", room_id, user);
-    ws.on_upgrade(move |socket| handle_chatroom_socket(socket, room_id, user))
+    let chatroom_broadcaster = state.chatroom_broadcaster;
+    ws.on_upgrade(move |socket| handle_chatroom_socket(socket, room_id, user, chatroom_broadcaster))
 }
 
-async fn handle_chatroom_socket(mut socket: WebSocket, room_id: u64, user: String) {
-    let (tx, rx) = broadcast::channel::<SendMsg>(room_id as usize);
+async fn handle_chatroom_socket(
+    socket: WebSocket,
+    room_id: u64,
+    user: String,
+    chatroom_broadcaster: broadcast::Sender<ChatroomMessage>,
+) {
+    let rx = chatroom_broadcaster.subscribe();
 
     let (sender, receiver) = socket.split();
-    let mut send_task = tokio::spawn(read_from_chatroom(receiver, room_id, user.clone(), tx));
+    let mut send_task = tokio::spawn(read_from_chatroom(
+        receiver,
+        room_id,
+        user.clone(),
+        chatroom_broadcaster,
+    ));
     let mut recv_task = tokio::spawn(write_to_chatroom(sender, room_id, user.clone(), rx));
 
     tokio::select! {
@@ -100,20 +111,18 @@ struct RecvMsg {
     message: String,
 }
 
-#[derive(Debug, Serialize, Clone)]
-struct SendMsg {
-    user: String,
-    message: String,
-}
-
 async fn write_to_chatroom(
     mut sender: SplitSink<WebSocket, Message>,
     room_id: u64,
     user: String,
-    mut rx: broadcast::Receiver<SendMsg>,
+    mut rx: broadcast::Receiver<ChatroomMessage>,
 ) {
     while let Ok(send_msg) = rx.recv().await {
-        let Ok(body) = serde_json::to_string(&send_msg) else {
+        if send_msg.room != room_id {
+            continue;
+        }
+
+        let Ok(body) = serde_json::to_string(&send_msg.body) else {
             tracing::error!(
                 "Room {}: User {}: Failed to serialize message",
                 room_id,
@@ -136,7 +145,7 @@ async fn read_from_chatroom(
     mut receiver: SplitStream<WebSocket>,
     room_id: u64,
     user: String,
-    tx: broadcast::Sender<SendMsg>,
+    tx: broadcast::Sender<ChatroomMessage>,
 ) {
     while let Some(msg) = receiver.next().await {
         if let Err(e) = msg {
@@ -174,9 +183,13 @@ async fn read_from_chatroom(
                 recv_msg
             );
 
-            let send_msg = SendMsg {
+            let body = ChatroomMessageBody {
                 user: user.clone(),
                 message: recv_msg.message,
+            };
+            let send_msg = ChatroomMessage {
+                room: room_id,
+                body,
             };
             if let Err(e) = tx.send(send_msg) {
                 tracing::error!(
