@@ -1,4 +1,7 @@
-use std::sync::{Arc, Mutex};
+use std::sync::{
+    atomic::{self, AtomicU64},
+    Arc, Mutex,
+};
 
 use axum::{
     extract::{
@@ -18,7 +21,7 @@ use crate::app_state::{AppState, ChatroomMessage, ChatroomMessageBody};
 use crate::prelude::*;
 
 pub async fn ws_handler(ws: WebSocketUpgrade) -> impl IntoResponse {
-    tracing::info!("Serving websocket");
+    tracing::trace!("Serving websocket");
     ws.on_upgrade(handle_socket)
 }
 
@@ -26,14 +29,14 @@ async fn handle_socket(mut socket: WebSocket) {
     let mut is_game_started = false;
 
     while let Some(msg) = socket.recv().await {
-        tracing::info!("Received message: {:?}", msg);
+        tracing::trace!("Received message: {:?}", msg);
         let Ok(msg) = msg else {
             tracing::error!("Error receiving message: {:?}", msg);
             return;
         };
 
         if let Message::Close(c) = msg {
-            tracing::info!("Received close message: {:?}", c);
+            tracing::trace!("Received close message: {:?}", c);
             break;
         }
 
@@ -61,7 +64,7 @@ pub async fn chatroom(
     ws: WebSocketUpgrade,
     State(state): State<AppState>,
 ) -> impl IntoResponse {
-    tracing::info!("Serving chatroom {} for user {}", room_id, user);
+    tracing::trace!("Serving chatroom {} for user {}", room_id, user);
 
     let tweet_counter = state.chatroom_counter;
     let chatroom_broadcaster = state.chatroom_broadcaster;
@@ -76,7 +79,7 @@ async fn handle_chatroom_socket(
     room_id: u64,
     user: String,
     chatroom_broadcaster: broadcast::Sender<ChatroomMessage>,
-    tweet_counter: Arc<Mutex<u64>>,
+    tweet_counter: Arc<AtomicU64>,
 ) {
     let rx = chatroom_broadcaster.subscribe();
 
@@ -99,7 +102,7 @@ async fn handle_chatroom_socket(
         rv_a = &mut send_task => {
             match rv_a {
                 Ok(_) => {
-                    tracing::info!("Room {}: User {}: Finished sending messages", room_id, user.as_str());
+                    tracing::trace!("Room {}: User {}: Finished sending messages", room_id, user.as_str());
                 },
                 Err(_) => {
                     tracing::error!("Room {}: User {}: Error sending messages", room_id, user.as_str());
@@ -111,7 +114,7 @@ async fn handle_chatroom_socket(
         rv_b = &mut recv_task => {
             match rv_b {
                 Ok(_) => {
-                    tracing::info!("Room {}: User {}: Finished receiving messages", room_id, user.as_str());
+                    tracing::trace!("Room {}: User {}: Finished receiving messages", room_id, user.as_str());
                 },
                 Err(_) => {
                     tracing::error!("Room {}: User {}: Error receiving messages", room_id, user.as_str());
@@ -121,7 +124,7 @@ async fn handle_chatroom_socket(
         }
     }
 
-    tracing::info!(
+    tracing::trace!(
         "Room {}: User {}: Done (websocket destroyed)",
         room_id,
         user.as_str()
@@ -138,7 +141,7 @@ async fn write_to_chatroom(
     room_id: u64,
     user: String,
     mut rx: broadcast::Receiver<ChatroomMessage>,
-    tweet_counter: Arc<Mutex<u64>>,
+    tweet_counter: Arc<AtomicU64>,
 ) {
     while let Ok(send_msg) = rx.recv().await {
         if send_msg.room != room_id {
@@ -161,17 +164,9 @@ async fn write_to_chatroom(
                 e
             )
         } else {
-            if let Ok(mut tweet_counter) = tweet_counter.lock() {
-                *tweet_counter += 1;
-            } else {
-                tracing::error!(
-                    "Room {}: User {}: Failed to lock mutex and update tweet counter",
-                    room_id,
-                    user
-                );
-            }
+            tweet_counter.fetch_add(1, atomic::Ordering::Relaxed);
 
-            tracing::info!(
+            tracing::trace!(
                 "Room {}: User {}: Received message: {:?}",
                 room_id,
                 user,
@@ -198,7 +193,7 @@ async fn read_from_chatroom(
             continue;
         }
 
-        tracing::info!(
+        tracing::trace!(
             "Room {}: Received message from User {}: {:?}",
             room_id,
             user.clone(),
@@ -254,14 +249,14 @@ async fn read_from_chatroom(
 
             Message::Close(c) => {
                 if let Some(cf) = c {
-                    tracing::info!(
+                    tracing::trace!(
                         "Room {}: User {}: Received close message: {:?}",
                         room_id,
                         user,
                         cf
                     );
                 } else {
-                    tracing::info!(
+                    tracing::trace!(
                         "Room {}: User {}: Received close message without CloseFrame",
                         room_id,
                         user
@@ -275,20 +270,11 @@ async fn read_from_chatroom(
 }
 
 pub async fn get_tweet_view_count(State(state): State<AppState>) -> Result<String> {
-    let count = state
-        .chatroom_counter
-        .lock()
-        .map_err(|e| anyhow::anyhow!("failed to lock mutex: {e}"))?;
-    tracing::info!("Tweet view count: {}", count);
+    let count = state.chatroom_counter.load(atomic::Ordering::Relaxed);
+    tracing::trace!("Tweet view count: {}", count);
     Ok(count.to_string())
 }
 
-pub async fn reset_tweet_view_count(State(state): State<AppState>) -> Result<()> {
-    let mut count = state
-        .chatroom_counter
-        .lock()
-        .map_err(|e| anyhow::anyhow!("failed to lock mutex: {e}"))?;
-    *count = 0;
-
-    Ok(())
+pub async fn reset_tweet_view_count(State(state): State<AppState>) {
+    state.chatroom_counter.store(0, atomic::Ordering::Relaxed);
 }
