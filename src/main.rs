@@ -65,6 +65,7 @@ async fn main(
             post(handlers::count_archive_files_size),
         )
         .route("/20/cookie", post(handlers::get_cookie_from_archive_file))
+        .route("/21/coords/:cell_id", get(handlers::parse_coords))
         .fallback(handlers::not_found_handler)
         .with_state(app_state)
         .layer(

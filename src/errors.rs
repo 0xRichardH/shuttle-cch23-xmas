@@ -19,6 +19,8 @@ pub enum AppError {
     SqlxMigrationError(#[from] sqlx::migrate::MigrateError),
     #[error(transparent)]
     IOError(#[from] std::io::Error),
+    #[error(transparent)]
+    NumParseIntError(#[from] std::num::ParseIntError),
 
     #[error("Bad request: {0}")]
     BadRequest(String),
