@@ -26,6 +26,7 @@ async fn main(
         .route("/1/*rest", get(handlers::recalibrate_packet_id))
         .route("/4/strength", post(handlers::reindeer_strength))
         .route("/4/contest", post(handlers::reindeer_contest))
+        .route("/5", post(handlers::slice_the_loop))
         .route("/6", post(handlers::count_elf))
         .route("/7/decode", get(handlers::cookies_recipe))
         .route("/7/bake", get(handlers::bake_cookies))
