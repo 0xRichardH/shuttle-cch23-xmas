@@ -3,6 +3,7 @@ pub mod errors;
 pub mod handlers;
 pub mod prelude;
 pub mod repo;
+pub mod utils;
 
 use std::{collections::HashMap, fmt::Display};
 

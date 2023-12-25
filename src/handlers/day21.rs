@@ -1,4 +1,4 @@
-use crate::{app_state::AppState, prelude::*};
+use crate::{app_state::AppState, prelude::*, utils::RequestClient};
 use axum::extract::{Path, State};
 use s2::{cellid::CellID, latlng::LatLng};
 
@@ -62,7 +62,8 @@ async fn get_country_from_lat_lng(lat_lng: LatLng, api_key: &str) -> Result<Stri
         lat = lat_lng.lat.deg(),
         lng = lat_lng.lng.deg()
     );
-    let body = reqwest::get(&url).await?.text().await?;
+
+    let body = RequestClient::new(3).get(&url).await?.text().await?;
     tracing::info!("get country from lat lng: {body:?}");
     let result = serde_json::from_str::<serde_json::Value>(&body)?;
 

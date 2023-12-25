@@ -20,6 +20,8 @@ pub enum AppError {
     #[error(transparent)]
     ReqwestError(#[from] reqwest::Error),
     #[error(transparent)]
+    RequestMiddlewareError(#[from] reqwest_middleware::Error),
+    #[error(transparent)]
     IOError(#[from] std::io::Error),
     #[error(transparent)]
     NumParseIntError(#[from] std::num::ParseIntError),
