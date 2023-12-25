@@ -20,7 +20,7 @@ pub async fn get_gift_emojis(numbers: String) -> String {
         return String::new();
     }
 
-    (0..n[0]).map(|_| "🎁").collect::<String>()
+    "🎁".repeat(n[0] as usize)
 }
 
 pub async fn rocket(body: String) -> String {
