@@ -18,6 +18,8 @@ pub enum AppError {
     #[error(transparent)]
     SqlxMigrationError(#[from] sqlx::migrate::MigrateError),
     #[error(transparent)]
+    ReqwestError(#[from] reqwest::Error),
+    #[error(transparent)]
     IOError(#[from] std::io::Error),
     #[error(transparent)]
     NumParseIntError(#[from] std::num::ParseIntError),

@@ -8,6 +8,7 @@ use cch23_xmas::{
     handlers::{self},
 };
 use shuttle_persist::PersistInstance;
+use shuttle_secrets::SecretStore;
 use sqlx::PgPool;
 use tower_http::{services::ServeDir, trace::TraceLayer};
 
@@ -15,8 +16,9 @@ use tower_http::{services::ServeDir, trace::TraceLayer};
 async fn main(
     #[shuttle_persist::Persist] persist: PersistInstance,
     #[shuttle_shared_db::Postgres] db_pool: PgPool,
+    #[shuttle_secrets::Secrets] secret_store: SecretStore,
 ) -> shuttle_axum::ShuttleAxum {
-    let app_state = AppState::new(persist, db_pool);
+    let app_state = AppState::new(secret_store, persist, db_pool);
 
     let router = Router::new()
         .route("/", get(handlers::hello_world))
@@ -66,6 +68,10 @@ async fn main(
         )
         .route("/20/cookie", post(handlers::get_cookie_from_archive_file))
         .route("/21/coords/:cell_id", get(handlers::parse_coords))
+        .route(
+            "/21/country/:cell_id",
+            get(handlers::get_country_from_coords),
+        )
         .fallback(handlers::not_found_handler)
         .with_state(app_state)
         .layer(

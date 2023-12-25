@@ -1,10 +1,12 @@
 use std::sync::{atomic::AtomicU64, Arc};
 
 use shuttle_persist::PersistInstance;
+use shuttle_secrets::SecretStore;
 use tokio::sync::broadcast;
 
 #[derive(Clone)]
 pub struct AppState {
+    pub secrect_store: Arc<SecretStore>,
     pub persist: Arc<PersistInstance>,
     pub db: sqlx::PgPool,
     pub chatroom_broadcaster: broadcast::Sender<ChatroomMessage>,
@@ -24,9 +26,10 @@ pub struct ChatroomMessage {
 }
 
 impl AppState {
-    pub fn new(persist: PersistInstance, db: sqlx::PgPool) -> Self {
+    pub fn new(secrect_store: SecretStore, persist: PersistInstance, db: sqlx::PgPool) -> Self {
         let (chatroom_broadcaster, _) = broadcast::channel(1024);
         Self {
+            secrect_store: Arc::new(secrect_store),
             persist: Arc::new(persist),
             db,
             chatroom_broadcaster,

@@ -23,6 +23,7 @@ sha2 = "0.10.8"
 shuttle-axum = { version = "0.35", default-features = false, features = ["axum-0-7"] }
 shuttle-persist = "0.35.1"
 shuttle-runtime = "0.35"
+shuttle-secrets = "0.35.2"
 shuttle-shared-db = { version = "0.35.1", features = ["postgres"] }
 sqlx = "0.7.3"
 tar = "0.4.40"
