@@ -73,6 +73,7 @@ async fn main(
             "/21/country/:cell_id",
             get(handlers::get_country_from_coords),
         )
+        .route("/22/integers", post(handlers::get_gift_emojis))
         .fallback(handlers::not_found_handler)
         .with_state(app_state)
         .layer(
