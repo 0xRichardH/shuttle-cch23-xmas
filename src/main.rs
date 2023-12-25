@@ -74,6 +74,7 @@ async fn main(
             get(handlers::get_country_from_coords),
         )
         .route("/22/integers", post(handlers::get_gift_emojis))
+        .route("/22/rocket", post(handlers::rocket))
         .fallback(handlers::not_found_handler)
         .with_state(app_state)
         .layer(
