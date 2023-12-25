@@ -23,3 +23,10 @@ watch-validate day:
 
 deploy:
   cargo shuttle deploy --allow-dirty
+
+view-secret:
+  ansible-vault view Secrets.toml.enc
+edit-secret:
+  ansible-vault edit Secrets.toml.enc
+decrypt-secret:
+  ansible-vault decrypt Secrets.toml.enc --output Secrets.toml
