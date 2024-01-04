@@ -25,24 +25,18 @@ pub async fn reset_orders_and_regions_db(State(state): State<AppState>) -> Resul
         .context("drop orders table")?;
 
     sqlx::query(
-        "
-CREATE TABLE regions (
-  id INT PRIMARY KEY,
-  name VARCHAR(50)
-)",
+        r#"
+        
+        CREATE TABLE regions ( id INT PRIMARY KEY, name varchar(50))"#,
     )
     .execute(&mut *transaction)
     .await
     .context("create regions table")?;
 
     sqlx::query(
-        "
-CREATE TABLE orders (
-  id INT PRIMARY KEY,
-  region_id INT,
-  gift_name VARCHAR(50),
-  quantity INT
-)",
+        r#"
+        CREATE TABLE orders ( id INT PRIMARY KEY, region_id INT, gift_name varchar(50), quantity INT
+)"#,
     )
     .execute(&mut *transaction)
     .await
@@ -84,11 +78,11 @@ pub async fn get_regions_orders_summary(
     State(state): State<AppState>,
 ) -> Result<Json<Vec<RegionsOrdersSummary>>> {
     let data = sqlx::query_as::<_, RegionsOrdersSummary>(
-        "
+        r#"
     SELECT regions.name AS region, SUM(orders.quantity) AS total 
     FROM orders INNER JOIN regions ON orders.region_id = regions.id 
     GROUP BY 1 
-    ORDER BY 1",
+    ORDER BY 1"#,
     )
     .fetch_all(&state.db)
     .await?;
@@ -106,10 +100,9 @@ pub async fn get_regions_top_gifts(
     State(state): State<AppState>,
     Path(number): Path<u32>,
 ) -> Result<Json<Vec<RegionsTopGifts>>> {
-    let mut sql = String::from("SELECT name, NULL FROM regions ORDER BY name");
+    let mut sql = "SELECT name, NULL FROM regions ORDER BY name";
     if number > 0 {
-        sql = f!(
-        "
+        sql = r#"
 WITH added_row_number AS (
   SELECT 
     regions.name AS region, 
@@ -119,13 +112,12 @@ WITH added_row_number AS (
   GROUP BY 1, 2
   ORDER BY 1, 3 DESC
 )
-SELECT region, gift_name FROM added_row_number WHERE row_number <= {} ORDER BY region, row_number;
-        ",
-        number
-    );
+SELECT region, gift_name FROM added_row_number WHERE row_number <= $1 ORDER BY region, row_number;
+        "#;
     }
 
-    let data = sqlx::query_as::<_, (Option<String>, Option<String>)>(&sql)
+    let data = sqlx::query_as::<_, (Option<String>, Option<String>)>(sql)
+        .bind(number as i32)
         .fetch_all(&state.db)
         .await?;
     tracing::debug!("Top gifts of Regions (raw data): {:?}", data);
